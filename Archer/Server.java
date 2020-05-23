@@ -16,17 +16,13 @@ import java.util.HashMap;
  * Server
  */
 public class Server {
-    private static int port = 8888;
-
-    public static void main(String[] args) {
+    public static void make_server(int port, Application application) {
         ServerSocket server;
         try {
             server = new ServerSocket(port);
-            System.out.println("run server in " + port + "....");
-
             while(true){
                 Socket socket = server.accept();
-                new Handler(socket).start();
+                new Handler(socket, application).start();
             }   
         }catch (IOException e){
             System.out.println(e);
@@ -41,12 +37,15 @@ class Handler extends Thread implements CallBack{
     private BufferedReader reader;
     private BufferedWriter writer;
 
-    private HashMap<String, String> environ = new HashMap<>();
-    private String response_line;
-    private HashMap<String, String> response_header = new HashMap<>();
+    private Application application;
 
-    public Handler(Socket socket) throws IOException{
+    private HashMap<String, String> environ = new HashMap<>();
+    // private String response_line;
+    // private HashMap<String, String> response_header = new HashMap<>();
+
+    public Handler(Socket socket, Application application) throws IOException{
         this.socket = socket;
+        this.application = application;
         if(socket != null){
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
             writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
@@ -54,12 +53,13 @@ class Handler extends Thread implements CallBack{
     }
 
     private HashMap<String, String> parse(BufferedReader reader) throws IOException{
-        // HashMap<String, String> environ = new HashMap<>();
+        HashMap<String, String> environ = new HashMap<>();
+        assert(reader != null);
+
         String request_line = reader.readLine();
-        if(request_line.length() == 0){
+        if(request_line == null || request_line.length() == 0){
             return environ;
         }
-        
         String[] info = request_line.split(" ");
         environ.put("REQUEST_METHOD", info[0]);
         environ.put("PATH_INFO", info[1]);
@@ -86,23 +86,13 @@ class Handler extends Thread implements CallBack{
     @Override
     public void run(){
         try {
-            HashMap<String, String> environ = parse(reader);
+            environ = parse(reader);
             if(environ.isEmpty()){
                 return;
             }
             System.out.println("connect from [" + socket.getRemoteSocketAddress() + "] ----- " + environ.get("PATH_INFO"));
-            
-            Application a = new Archer();
-
-            Application archer = new Archer();
-            ArrayList<String> body = archer.call_app(environ, this);
-
-            // StringBuilder sb = new StringBuilder();
-
-            // sb.append("HTTP/1.1 200 OK\r\n");
-            // sb.append("Content-Type: text/html\r\n");
-            // sb.append("\r\n");
-            // sb.append("<h2>Welcome to Archer!</h2>");
+        
+            ArrayList<String> body = application.call_app(environ, this);
 
             for (String string : body) {
                 writer.write(string);
@@ -114,7 +104,7 @@ class Handler extends Thread implements CallBack{
 
         } catch (Exception e) {
             //TODO: handle exception
-            System.out.println(e);
+            e.printStackTrace();
         }finally{
 
         }

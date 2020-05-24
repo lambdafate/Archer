@@ -2,6 +2,7 @@ package Archer;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.lang.annotation.ElementType;
@@ -11,54 +12,116 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 public class Archer implements Application {
     public static HashMap<String, Method> url_map = new HashMap<>();
+    protected static ThreadLocal<HttpRequest> HttpRequest = new ThreadLocal<>();
 
     @Target(ElementType.METHOD)
     @Retention(RetentionPolicy.RUNTIME)
     public static @interface router {
         String path() default "";
+
         String method() default "get";
     }
 
-    public ArrayList<String> call_app(HashMap<String, String> environ, CallBack callback) throws IOException{
-        ArrayList<String> body = new ArrayList<>();
-        HashMap<String, String> response_header = new HashMap<>();
-        response_header.put("Content-Type", "text/html");
+    protected static String template_path = "template/";
+    protected static String static_path = "static/";
 
-        Context.Request.set();
+    private HttpRequest PreprocessHttpRequest(HashMap<String, String> environ) {
+        var http = new HttpRequest();
+        // request method: get or post
+        http.method = environ.get("REQUEST_METHOD");
+        // request url and query args
+        String query_url = environ.get("PATH_INFO");
+        String[] info = query_url.split("\\?");
+        http.url = info[0];
+        if (info.length >= 2) {
+            String[] args = info[1].split("&");
+            for (String arg : args) {
+                String[] kv = arg.split("=");
+                assert (kv.length == 2);
 
-        Method handler = url_map.getOrDefault(environ.get("PATH_INFO"), null);
-        if(handler == null){
-            callback.start_response("404 NotFound", response_header);
-            return body;
+                http.args.put(kv[0], kv[1]);
+            }
         }
-        callback.start_response("200 OK", response_header);
-        
-        try{
-            String res = (String)handler.invoke(null);
-            body.add(res);
 
-        }catch(Exception e){
+        // request form
+        if (http.method.toUpperCase() == "POST") {
+
+        }
+
+        return http;
+    }
+
+    private Method MatchRequest(String url) {
+        return url_map.getOrDefault(url, null);
+    }
+
+    private String DispatchRequest(String url) {
+        Method handler = MatchRequest(url);
+        assert (handler != null);
+
+        Object res = null;
+        String body = "";
+        try {
+            res = handler.invoke(null);
+            // now we only support String, which means return a html file path
+            assert (res instanceof String);
+            if (res instanceof String) {
+                // System.out.println(Archer.template_path + (String) res);
+                body = ReadResource(Archer.template_path + (String)res);
+            } else if (res instanceof Map) {
+
+            }
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return body;
     }
 
-    public void run(int port){
-        File logo = new File("./archer.logo");
-        if(logo.exists()){
-            try{
-                BufferedReader br = new BufferedReader(new FileReader(logo));
-                String line = "";
-                while(!(line = br.readLine()).equals("")){
-                    System.out.println(line);
-                }
-                br.close();
-            }catch(Exception e){ }
+    private String ReadResource(String filepath) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        File file = new File(filepath);
+        BufferedReader br = new BufferedReader(new FileReader(file));
+        assert(br != null);
+        String line = "";
+        while ((line = br.readLine()) != null) {
+            sb.append(line);
+            sb.append("\r\n");
         }
+        br.close();
+        return sb.toString();
+    }   
 
+
+    public ArrayList<String> call_app(HashMap<String, String> environ, CallBack callback) throws IOException{
+        ArrayList<String> body = new ArrayList<>();
+        HashMap<String, String> response_header = new HashMap<>();
+        
+        // set threadlocal request valiable
+        var http = PreprocessHttpRequest(environ);
+        HttpRequest.set(http);
+    
+        Method handler = MatchRequest(http.url);
+        if(handler == null){
+            callback.start_response("404 NotFound", response_header);
+            return body;
+        }
+        
+        callback.start_response("200 OK", response_header);
+        body.add(DispatchRequest(http.url));
+        return body;
+    }
+
+    public void run(int port){
+        try{
+            System.out.println(ReadResource("./archer.logo"));
+        }catch(IOException e){
+            System.err.println("reading logo error: " + e);
+        }
+        
         System.out.println("Welcome to Archer!");
         System.out.println("run server in port: " + port + "\n");
 

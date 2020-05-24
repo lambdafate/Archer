@@ -16,6 +16,8 @@ import java.util.HashMap;
  * Server
  */
 public class Server {
+    public static String version = "Archer/0.1";
+
     public void run_server(int port, Application application) {
         ServerSocket server;
         try {
@@ -75,6 +77,13 @@ class Handler extends Thread implements CallBack{
     }
 
     public void start_response(String response_line, HashMap<String, String> response_header) throws IOException {
+        // default content-type
+        if(response_header.getOrDefault("Content-Type", null) == null){
+            response_header.put("Content-Type", "text/html; charset=utf-8");
+        }
+        // server info
+        response_header.put("Server", Server.version);
+
         writer.write(environ.get("REQUEST_PROTOCOL") + " " + response_line + "\r\n");
         for (String k : response_header.keySet()) {
             writer.write(k + ": " + response_header.get(k) + "\r\n");

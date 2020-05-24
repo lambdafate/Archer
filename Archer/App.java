@@ -7,15 +7,15 @@ package Archer;
 public class App {
 
     @Archer.router(path="/index", method="get")
-    public static String index(){
+    public static Object index(){
         
-        return "<h2 style=\"text-align:center;\">Welcome to Archer!<h2>";
+        return "index.html";
     }
 
     @Archer.router(path="/")
-    public static String hello(){
-
-        return "<a href=\"/index\"> Click me!</a>";
+    public static Object hello(){
+        
+        return "welcome.html";
     }
 
     public static void main(String[] args) {

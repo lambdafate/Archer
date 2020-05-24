@@ -16,7 +16,7 @@ import java.util.HashMap;
  * Server
  */
 public class Server {
-    public static void make_server(int port, Application application) {
+    public void run_server(int port, Application application) {
         ServerSocket server;
         try {
             server = new ServerSocket(port);

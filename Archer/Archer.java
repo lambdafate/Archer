@@ -27,6 +27,8 @@ public class Archer implements Application {
         HashMap<String, String> response_header = new HashMap<>();
         response_header.put("Content-Type", "text/html");
 
+        Context.Request.set();
+
         Method handler = url_map.getOrDefault(environ.get("PATH_INFO"), null);
         if(handler == null){
             callback.start_response("404 NotFound", response_header);
@@ -43,7 +45,6 @@ public class Archer implements Application {
         }
         return body;
     }
-
 
     public void run(int port){
         File logo = new File("./archer.logo");
@@ -74,6 +75,7 @@ public class Archer implements Application {
         }
 
         // make a server
-        Server.make_server(port, this);
+        Server server = new Server();
+        server.run_server(port, this);
     }
 }

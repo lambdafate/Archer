@@ -63,6 +63,9 @@ class Handler extends Thread implements CallBack{
             return environ;
         }
         String[] info = request_line.split(" ");
+        if(info.length != 3){
+            return environ;
+        }
         environ.put("REQUEST_METHOD", info[0]);
         environ.put("PATH_INFO", info[1]);
         environ.put("REQUEST_PROTOCOL", info[2]);
@@ -73,6 +76,8 @@ class Handler extends Thread implements CallBack{
             environ.put(header[0], header[1]);
         }
 
+        // read 'form data' if request method is post?
+        
         return environ;
     }
 
@@ -103,8 +108,10 @@ class Handler extends Thread implements CallBack{
         
             ArrayList<String> body = application.call_app(environ, this);
 
-            for (String string : body) {
-                writer.write(string);
+            for (String data : body) {
+                if(data != null){
+                    writer.write(data);
+                }
             }
             
             writer.flush();

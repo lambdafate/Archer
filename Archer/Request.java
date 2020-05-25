@@ -20,4 +20,16 @@ public class Request {
         return Archer.HttpRequest.get().args;
     }
     
+    public static String form(String key){
+        var r = Archer.HttpRequest.get();
+        return r.form.get(key);
+    }
+
+    public static HashMap<String, String> form(){
+        return Archer.HttpRequest.get().form;
+    }
+
+    public static String json(){
+        return Archer.HttpRequest.get().json;
+    }
 }

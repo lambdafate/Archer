@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+// import jdk.nashorn.internal.parser.JSONParser;
+
 public class Archer implements Application {
     public static HashMap<String, Method> url_map = new HashMap<>();
     protected static ThreadLocal<HttpRequest> HttpRequest = new ThreadLocal<>();
@@ -41,21 +43,25 @@ public class Archer implements Application {
         String[] info = query_url.split("\\?");
         http.url = info[0];
         if (info.length >= 2) {
-            String[] args = info[1].split("&");
-            for (String arg : args) {
-                String[] kv = arg.split("=");
-                // assert (kv.length == 2);
-                if(kv.length == 2){
-                    http.args.put(kv[0], kv[1]);
-                }
-            }
+            http.args = Util.parseQueryArgs(info[1]);
         }
 
-        // request form
-        if (http.method.toUpperCase() == "POST") {
+        // now we only support 'get' and 'post'
+        assert(http.method.equals("GET") || http.method.equals("POST"));
 
+        if (http.method.equals("GET")) {
+            return http;
         }
-
+        // parse request form
+        String content_type = environ.getOrDefault("Content-Type", "");
+        String request_body = environ.getOrDefault("body", "");
+        if(content_type.contains("application/x-www-form-urlencoded")){
+            http.form = Util.parseQueryArgs(request_body);
+        }else if(content_type.contains("application/json")){
+            http.json = request_body;
+        }else{
+            System.err.println("Unsupport Content-type: " + environ.get("Content-Type"));
+        }
         return http;
     }
 

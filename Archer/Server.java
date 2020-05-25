@@ -66,7 +66,7 @@ class Handler extends Thread implements CallBack{
         if(info.length != 3){
             return environ;
         }
-        environ.put("REQUEST_METHOD", info[0]);
+        environ.put("REQUEST_METHOD", info[0].toUpperCase());
         environ.put("PATH_INFO", info[1]);
         environ.put("REQUEST_PROTOCOL", info[2]);
 
@@ -74,10 +74,23 @@ class Handler extends Thread implements CallBack{
         while(!(request_header = reader.readLine()).equals("")){
             String[] header = request_header.split(": ");
             environ.put(header[0], header[1]);
+            // System.out.println(request_header);
         }
-
-        // read 'form data' if request method is post?
         
+        // read 'form data' if request method is post?
+        // we make socket shutdowmInput here 
+        // for reading all bytes lefe in InputStream , if not do,
+        // the reading below will block until socket close.  
+        socket.shutdownInput();
+
+        StringBuilder request_body = new StringBuilder();
+        String line = "";
+        while((line = reader.readLine()) != null){
+            request_body.append(line);
+        }
+        // System.out.println(request_body);
+        environ.put("body", request_body.toString());
+
         return environ;
     }
 
@@ -89,11 +102,14 @@ class Handler extends Thread implements CallBack{
         // server info
         response_header.put("Server", Server.version);
 
+        // Data
+    
         writer.write(environ.get("REQUEST_PROTOCOL") + " " + response_line + "\r\n");
         for (String k : response_header.keySet()) {
             writer.write(k + ": " + response_header.get(k) + "\r\n");
         }
-        writer.write("\r\n");
+        // writer.write("\r\n");
+        writer.newLine();
     }
 
 

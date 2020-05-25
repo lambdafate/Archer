@@ -8,10 +8,12 @@ import java.util.*;
 
 public class App {
 
-    @Archer.router(path="/index", method="get")
+    @Archer.router(path="/index")
     public static Object index(){
-        
-        return "index.html";
+        if(Request.method().equals("GET")){
+            return "index.html";
+        }
+        return Request.json();
     }
 
     @Archer.router(path="/")

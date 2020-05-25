@@ -14,6 +14,20 @@ import java.util.Map;
  */
 public class Util {
 
+    protected static HashMap<String, String> parseQueryArgs(String query_args){
+        HashMap<String, String> res = new HashMap<>();
+        String[] args = query_args.split("&");
+        for (String arg : args) {
+            String[] kv = arg.split("=");
+            // assert (kv.length == 2);
+            if (kv.length == 2) {
+                res.put(kv[0], kv[1]);
+            }
+        }
+        return res;
+    }
+
+
     protected static String ReadResource(String filepath) throws IOException {
         StringBuilder sb = new StringBuilder();
         File file = new File(filepath);

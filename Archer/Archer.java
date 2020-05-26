@@ -169,8 +169,13 @@ public class Archer implements Application {
                     System.out.println("router path error: " + router.path());
                     System.exit(1);
                 }
-                System.out.println(Util.ConvertUrl(router.path()) + "\t---->\t" + method.getName());
-                Archer.url_map.put(Util.ConvertUrl(router.path()), method);
+                String r = Util.ConvertUrl(router.path());
+                if(url_map.getOrDefault(r, null) != null){
+                    System.out.println("router path repeat: " + router.path());
+                    System.exit(1);
+                }
+                System.out.println(r + "\t---->\t" + method.getName());
+                Archer.url_map.put(r, method);
             }
         }
     }

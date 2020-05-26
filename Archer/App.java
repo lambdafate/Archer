@@ -8,7 +8,7 @@ import java.util.*;
 
 public class App {
 
-    @Archer.router(path="/index", method={"POST"})
+    @Archer.router(path="/index", method={"GET", "POST"})
     public static Object index(){
         // System.out.println("name: " + name);
         if(Request.method().equals("GET")){
@@ -17,7 +17,7 @@ public class App {
         return Request.form();
     }
 
-    @Archer.router(path="/", method={"POST"})
+    @Archer.router(path="/", method={"GET"})
     public static Object hello(){
         Map<Object, Object> map = new HashMap<>();
         map.put("bool", true);

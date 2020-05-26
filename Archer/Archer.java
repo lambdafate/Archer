@@ -18,7 +18,9 @@ public class Archer implements Application {
     public static HashMap<String, Method> url_map = new HashMap<>();
     protected static ThreadLocal<HttpRequest> HttpRequest = new ThreadLocal<>();
     protected static ThreadLocal<HttpResponse> HttpResponse = new ThreadLocal<>();
+    protected static ThreadLocal<HttpSession> HttpSession = new ThreadLocal<>();
 
+    protected static HashMap<String, HttpSession> SessionPool = new HashMap<>();
 
     @Target(ElementType.METHOD)
     @Retention(RetentionPolicy.RUNTIME)
@@ -30,6 +32,30 @@ public class Archer implements Application {
     protected static String template_path = "template/";
     protected static String static_path = "static/";
     protected static String default_suffix = ".html";
+    protected static String session_name = "Archer_SessionId";
+
+
+    private void PreprocessHttpSession(HashMap<String, String> environ){
+        String cookie = environ.getOrDefault("Cookie", null);
+        String value = null;
+        if((value = Util.GetSessionValueFromCookie(cookie)) != null){
+            synchronized(Archer.SessionPool){
+                var session = Archer.SessionPool.getOrDefault(value, null);
+                if(session != null){
+                    Archer.HttpSession.set(session);
+                    return;
+                }
+            }
+        }
+
+        value = String.valueOf(System.currentTimeMillis());
+        Response.set_header("Set-Cookie", Archer.session_name + "=" + value +"; HttpOnly");
+        HttpSession session = new HttpSession();
+        synchronized(Archer.SessionPool){
+            Archer.SessionPool.put(value, session);
+        }
+        Archer.HttpSession.set(session);
+    }
 
     private HttpRequest PreprocessHttpRequest(HashMap<String, String> environ) {
         var http = new HttpRequest();
@@ -116,7 +142,9 @@ public class Archer implements Application {
             }
             // now we only support String, which means return a html file path
             // assert (res instanceof String);
-            if (res instanceof String) {
+            if (res == null){
+
+            }else if (res instanceof String) {
                 body = (String) res;
                 if(body.endsWith(Archer.default_suffix)){
                     body = Util.ReadResource(Archer.template_path + (String)res);
@@ -125,7 +153,7 @@ public class Archer implements Application {
                 body = Util.ParseMaptoString((Map<Object, Object>)res);
                 Response.set_header("Content-Type", "application/json; charset=utf-8");
             }else{
-                throw new Exception("Unsupport this type " + res);
+                body = res.toString();
             }
 
         } catch (Exception e) {
@@ -134,9 +162,10 @@ public class Archer implements Application {
         return body;
     }
 
+
     public ArrayList<String> call_app(HashMap<String, String> environ, CallBack callback) throws IOException{
         ArrayList<String> body = new ArrayList<>();
-
+        
         // set threadlocal request valiable
         var http = PreprocessHttpRequest(environ);
         HttpRequest.set(http);
@@ -145,11 +174,8 @@ public class Archer implements Application {
         var response = new HttpResponse();
         HttpResponse.set(response);
 
-        // Method handler = MatchRequest(http.url);
-        // if(handler == null){
-        //     callback.start_response("404 NotFound", response_header);
-        //     return body;
-        // }
+        // deal with session
+        PreprocessHttpSession(environ);
 
         String res = DispatchRequest(http.url);
         callback.start_response(Response.response_status() , Response.response_header());
@@ -158,7 +184,7 @@ public class Archer implements Application {
         return body;
     }
 
-    private void buildMap(){
+    private void buildUrlMap(){
         Method[] methods = App.class.getDeclaredMethods();
         for (Method method : methods) {
             Archer.router router = method.getAnnotation(Archer.router.class);
@@ -192,7 +218,7 @@ public class Archer implements Application {
         System.out.println("run server in port: " + port + "\n");
 
         // build url map
-        buildMap();
+        buildUrlMap();
 
         // make a server
         Server server = new Server();

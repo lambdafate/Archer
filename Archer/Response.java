@@ -10,6 +10,7 @@ public class Response {
 
     private static final Map<Integer, String> tips = Map.of(
         200, "OK",
+        301, "redirect",
         404, "Not Found",
         405, "Method Not Allowed"
     ); 
@@ -31,5 +32,11 @@ public class Response {
     }
     protected static HashMap<String, String> response_header(){
         return Archer.HttpResponse.get().response_header;
+    }
+
+    protected static Object redirect_to(String url){
+        set_response(301);
+        set_header("Location", url);
+        return null;
     }
 }

@@ -16,6 +16,20 @@ import java.util.regex.Pattern;
  */
 public class Util {
 
+    protected static String GetSessionValueFromCookie(String cookie){
+        if(cookie == null || cookie.length() == 0){
+            return null;
+        }
+        String[] kvs = cookie.split(";");
+        for (String kv : kvs) {
+            String[] info = kv.strip().split("=");
+            if (info.length == 2 && info[0].equals(Archer.session_name)) {
+                return info[1];
+            }
+        }
+        return null;
+    }
+
 
     protected static String ConvertUrl(String url){
         return url.replaceAll("<.*>", "([^/]+)");

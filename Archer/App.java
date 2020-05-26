@@ -8,36 +8,28 @@ import java.util.*;
 
 public class App {
 
-    @Archer.router(path="/index", method={"GET", "POST"})
-    public static Object index(){
-        // System.out.println("name: " + name);
+    @Archer.router(path="/login", method={"GET", "POST"})
+    public static Object login(){
         if(Request.method().equals("GET")){
             return "index.html";
         }
-        return Request.form();
+
+        String first = Request.form("firstname");
+        String second = Request.form("lastname");
+
+        Session.set("firstname", first);
+        Session.set("lastname",  second);
+        Session.set("login", true);
+        
+        return Response.redirect_to("/");
     }
 
     @Archer.router(path="/", method={"GET"})
     public static Object hello(){
-        Map<Object, Object> map = new HashMap<>();
-        map.put("bool", true);
-        map.put("integer", 20);
-        map.put("double", 10.56);
-
-        Map<Object, Object> map2 = new HashMap<>();
-        map2.put("name", "你的名字");
-        map2.put("age", 20);
-
-        List<Object> list = new ArrayList<>();
-        list.add(1);
-        list.add("fuck");
-        list.add(map2);
-
-        map.put("list", list);
-        map.put("map", map2);
-
-        Response.set_header("key", "value");
-        return map;
+        if(Session.get("login") != null && (Boolean)Session.get("login")){
+            return Session.getSession();
+        }
+        return "你没有登陆!";
     }
 
     public static void main(String[] args) {

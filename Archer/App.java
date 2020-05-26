@@ -8,15 +8,16 @@ import java.util.*;
 
 public class App {
 
-    @Archer.router(path="/index")
+    @Archer.router(path="/index", method={"POST"})
     public static Object index(){
+        // System.out.println("name: " + name);
         if(Request.method().equals("GET")){
             return "index.html";
         }
-        return Request.json();
+        return Request.form();
     }
 
-    @Archer.router(path="/")
+    @Archer.router(path="/", method={"POST"})
     public static Object hello(){
         Map<Object, Object> map = new HashMap<>();
         map.put("bool", true);

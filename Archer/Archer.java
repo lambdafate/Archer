@@ -1,9 +1,5 @@
 package Archer;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -13,6 +9,8 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 // import jdk.nashorn.internal.parser.JSONParser;
 
@@ -26,8 +24,7 @@ public class Archer implements Application {
     @Retention(RetentionPolicy.RUNTIME)
     public static @interface router {
         String path() default "";
-
-        String method() default "get";
+        String[] method() default {"GET"};
     }
 
     protected static String template_path = "template/";
@@ -65,20 +62,58 @@ public class Archer implements Application {
         return http;
     }
 
-    private Method MatchRequest(String url) {
-        return url_map.getOrDefault(url, null);
+    private HashMap<String, Object> MatchRequest(String url) {
+        HashMap<String, Object> res = new HashMap<>();
+        Method handler = url_map.getOrDefault(url, null);
+        if(handler != null){
+            res.put("handler", handler);
+            res.put("arg", null); // now we just support one arg
+            return res;
+        }
+        for (String k : url_map.keySet()) {
+            Matcher m = Pattern.compile(k).matcher(url);
+            if(m.matches()){
+                res.put("handler", url_map.get(k));
+                if(m.groupCount() != 0){
+                    res.put("arg", m.group(1));
+                }
+                break;
+            }
+        }
+        return res;
     }
 
     private String DispatchRequest(String url) {
-        Method handler = MatchRequest(url);
-        if (handler == null){
+        HashMap<String, Object> fuck = MatchRequest(url);
+        if (fuck.getOrDefault("handler", null) == null){
             Response.set_response(404);
+            return null;
+        }
+        Method handler = (Method)fuck.get("handler");
+        Object arg = fuck.getOrDefault("arg", null);
+        
+        // check if handler support this request method.
+        boolean flag = false;
+        router r = handler.getAnnotation(router.class);
+        for (String request_type : r.method()) {
+            if(request_type.toUpperCase().equals(Request.method())){
+                flag = true;
+                break;
+            }
+        }
+        if(!flag){
+            Response.set_response(405);
             return null;
         }
 
         String body = "";
         try {
-            Object res = handler.invoke(null);
+            Object res;
+            if(arg != null){
+                res = handler.invoke(null, arg);
+            }else{
+                res = handler.invoke(null);
+            }
             // now we only support String, which means return a html file path
             // assert (res instanceof String);
             if (res instanceof String) {
@@ -88,7 +123,7 @@ public class Archer implements Application {
                 }
             } else if (res instanceof Map) {
                 body = Util.ParseMaptoString((Map<Object, Object>)res);
-                Response.set_header("Content-Type", "application/json");
+                Response.set_header("Content-Type", "application/json; charset=utf-8");
             }else{
                 throw new Exception("Unsupport this type " + res);
             }
@@ -123,7 +158,25 @@ public class Archer implements Application {
         return body;
     }
 
+    private void buildMap(){
+        Method[] methods = App.class.getDeclaredMethods();
+        for (Method method : methods) {
+            Archer.router router = method.getAnnotation(Archer.router.class);
+            if(router != null){
+                // System.out.print(method.getName() + ": router annotation ---> ");
+                // System.out.println("path: " + router.path() + "\t" + "method: " + router.method());
+                if(!Util.CheckUrlFormat(router.path())){
+                    System.out.println("router path error: " + router.path());
+                    System.exit(1);
+                }
+                System.out.println(Util.ConvertUrl(router.path()) + "\t---->\t" + method.getName());
+                Archer.url_map.put(Util.ConvertUrl(router.path()), method);
+            }
+        }
+    }
+
     public void run(int port){
+        // display logo
         try{
             System.out.println(Util.ReadResource("./archer.logo"));
         }catch(IOException e){
@@ -134,16 +187,7 @@ public class Archer implements Application {
         System.out.println("run server in port: " + port + "\n");
 
         // build url map
-        System.out.println("check all methods for building url map....");
-        Method[] methods = App.class.getDeclaredMethods();
-        for (Method method : methods) {
-            Archer.router router = method.getAnnotation(Archer.router.class);
-            if(router != null){
-                System.out.print(method.getName() + ": router annotation ---> ");
-                System.out.println("path: " + router.path() + "\t" + "method: " + router.method());
-                Archer.url_map.put(router.path(), method);
-            }
-        }
+        buildMap();
 
         // make a server
         Server server = new Server();

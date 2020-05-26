@@ -11,7 +11,7 @@ public class HttpResponse {
 
     public HttpResponse(){
         response_status = "200 OK";
-        response_header.put("Content-Type", "text/html");
+        response_header.put("Content-Type", "text/html; charset=utf-8");
         response_header.put("Server", Server.version);
     }
 }

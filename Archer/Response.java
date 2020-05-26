@@ -10,7 +10,8 @@ public class Response {
 
     private static final Map<Integer, String> tips = Map.of(
         200, "OK",
-        404, "NotFound"
+        404, "Not Found",
+        405, "Method Not Allowed"
     ); 
 
     public static void set_response(int code){

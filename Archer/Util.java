@@ -8,11 +8,46 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Util
  */
 public class Util {
+
+
+    protected static String ConvertUrl(String url){
+        return url.replaceAll("<.*>", "([^/]+)");
+    }
+
+    protected static boolean CheckUrlFormat(String url){
+        if(url == null || url.length() == 0){
+            return false;
+        }
+        if(url.charAt(0) != '/'){
+            return false;
+        }
+        String pattern = "<.*?>";
+        Matcher m = Pattern.compile(pattern).matcher(url);
+        int num = 0;
+        while (m.find()) {
+            num++;
+        }
+        if(num > 1){
+            return false;
+        }
+        if(num == 0){
+            return true;
+        }
+        m = Pattern.compile("/(.*?)/<.*>(/)?").matcher(url);
+        if(m.find()){
+            return true;
+        }
+        return false;
+    }
+
+
 
     protected static HashMap<String, String> parseQueryArgs(String query_args){
         HashMap<String, String> res = new HashMap<>();
@@ -113,6 +148,27 @@ public class Util {
 
 
     public static void main(String[] args) {
+        // test chech url
+        String[] urls = {
+            "as", "/as",
+            "/index/", "/index/<saber>/", "index/<saber>/<lancer>"
+        };
+        boolean[] result = {
+            false, true,
+            true, true, false
+        };
+        for (int i = 0; i < result.length; i++) {
+            if(CheckUrlFormat(urls[i]) != result[i]){
+                System.out.println("url format error");
+                System.exit(1);
+            }
+            if(result[i]){
+                urls[i] = ConvertUrl(urls[i]);
+                System.out.println(urls[i]);
+            }
+        }
+        System.out.println("**********");
+
         // test parse map to string
         Map<Object, Object> map = new HashMap<>();
         map.put("bool", true);

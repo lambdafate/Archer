@@ -166,7 +166,7 @@ class Handler extends Thread implements CallBack{
                 return;
             }
 
-            System.out.println(new SimpleDateFormat("[yyyy-MM-dd HH:mm:ss]:").format(new Date()) + " connect from [" + socket.getRemoteSocketAddress() + "] ----- " + environ.get("PATH_INFO"));
+            System.out.println(new SimpleDateFormat("[yyyy-MM-dd HH:mm:ss]:").format(new Date()) + " connect from [" + socket.getRemoteSocketAddress() + "] ----- " + environ.get("REQUEST_METHOD") + "  " + environ.get("PATH_INFO"));
             
             if(Util.CheckStaticResourse(environ.getOrDefault("PATH_INFO", null))){
                 response_static(environ.getOrDefault("PATH_INFO", null));   

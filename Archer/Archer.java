@@ -35,6 +35,12 @@ public class Archer implements Application {
     protected static String session_name = "Archer_SessionId";
 
 
+    private Class appClass;
+    public Archer(Class appClass){
+        this.appClass = appClass;
+    }
+
+
     private void PreprocessHttpSession(HashMap<String, String> environ){
         String cookie = environ.getOrDefault("Cookie", null);
         String value = null;
@@ -184,7 +190,7 @@ public class Archer implements Application {
     }
 
     private void buildUrlMap(){
-        Method[] methods = App.class.getDeclaredMethods();
+        Method[] methods = this.appClass.getDeclaredMethods();
         for (Method method : methods) {
             Archer.router router = method.getAnnotation(Archer.router.class);
             if(router != null){
@@ -199,7 +205,7 @@ public class Archer implements Application {
                     System.out.println("router path repeat: " + router.path());
                     System.exit(1);
                 }
-                System.out.println(r + "\t---->\t" + method.getName());
+                // System.out.println(r + "\t---->\t" + method.getName());
                 Archer.url_map.put(r, method);
             }
         }
@@ -220,6 +226,7 @@ public class Archer implements Application {
         buildUrlMap();
 
         // make a server
+        System.out.println("waiting for connections ......");
         Server server = new Server();
         server.run_server(port, this);
     }

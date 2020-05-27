@@ -82,9 +82,8 @@ public class Archer implements Application {
             http.form = Util.parseQueryArgs(request_body);
         }else if(content_type.contains("application/json")){
             http.json = request_body;
-        }else{
-            System.err.println("Unsupport Content-type: " + environ.get("Content-Type"));
         }
+        
         return http;
     }
 
@@ -163,7 +162,7 @@ public class Archer implements Application {
     }
 
 
-    public ArrayList<String> call_app(HashMap<String, String> environ, CallBack callback) throws IOException{
+    public ArrayList<String> call_app(HashMap<String, String> environ, CallBack callback) throws Exception{
         ArrayList<String> body = new ArrayList<>();
         
         // set threadlocal request valiable

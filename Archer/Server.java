@@ -1,14 +1,12 @@
 package Archer;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 
 
@@ -17,6 +15,29 @@ import java.util.HashMap;
  */
 public class Server {
     public static String version = "Archer/0.1";
+
+    public static String binary_content_type = "application/octet-stream";
+    public static String text_content_type = "text/plain";
+
+    public static HashMap<String, String> general_files = new HashMap<>();
+    static {
+        general_files.put("html", "text/html");
+        general_files.put("css", "text/css");
+        general_files.put("js", "application/x-javascript");
+
+        general_files.put("jpg", "image/jpeg");
+        general_files.put("jpe", "image/jpeg");
+        general_files.put("jpeg", "image/jpeg");
+        general_files.put("png", "image/png");
+        general_files.put("gif", "image/gif");
+        general_files.put("ico", "image/x-icon");
+
+        general_files.put("doc", "application/msword");
+        general_files.put("pdf", "application/pdf");
+        general_files.put("txt", "text/plain");
+
+        general_files.put("json", "application/json");
+    }
 
     public void run_server(int port, Application application) {
         ServerSocket server;
@@ -32,32 +53,30 @@ public class Server {
             System.out.println(e);
         }
     }
+
 }
 
 class Handler extends Thread implements CallBack{
     private Socket socket;
-    private BufferedReader reader;
-    private BufferedWriter writer;
+    private DataInputStream reader;
+    private DataOutputStream writer;
 
     private Application application;
 
     private HashMap<String, String> environ = new HashMap<>();
-    // private String response_line;
-    // private HashMap<String, String> response_header = new HashMap<>();
 
     public Handler(Socket socket, Application application) throws IOException{
         this.socket = socket;
         this.application = application;
         if(socket != null){
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-            writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
+            reader = new DataInputStream(socket.getInputStream());
+            writer = new DataOutputStream(socket.getOutputStream());
         }
     }
 
-    private HashMap<String, String> parse(BufferedReader reader) throws IOException{
+    private HashMap<String, String> parse(DataInputStream reader) throws IOException{
         HashMap<String, String> environ = new HashMap<>();
-        assert(reader != null);
-
+    
         String request_line = reader.readLine();
         if(request_line == null || request_line.length() == 0){
             return environ;
@@ -74,7 +93,6 @@ class Handler extends Thread implements CallBack{
         while(!(request_header = reader.readLine()).equals("")){
             String[] header = request_header.split(": ");
             environ.put(header[0], header[1]);
-            // System.out.println(request_header);
         }
         
         // read 'form data' if request method is post?
@@ -94,7 +112,7 @@ class Handler extends Thread implements CallBack{
         return environ;
     }
 
-    public void start_response(String response_line, HashMap<String, String> response_header) throws IOException {
+    public void start_response(String response_line, HashMap<String, String> response_header) throws Exception {
         // default content-type
         if(response_header.getOrDefault("Content-Type", null) == null){
             response_header.put("Content-Type", "text/html; charset=utf-8");
@@ -103,15 +121,42 @@ class Handler extends Thread implements CallBack{
         response_header.put("Server", Server.version);
 
         // Data
-    
-        writer.write(environ.get("REQUEST_PROTOCOL") + " " + response_line + "\r\n");
+        response_header.put("Date", new SimpleDateFormat("dd MMM yyyy HH:mm:ss").format(new Date()) + " GMT");
+        
+        WriteUTF8(environ.get("REQUEST_PROTOCOL") + " " + response_line + "\r\n");
         for (String k : response_header.keySet()) {
-            writer.write(k + ": " + response_header.get(k) + "\r\n");
+            WriteUTF8(k + ": " + response_header.get(k) + "\r\n");
         }
-        // writer.write("\r\n");
-        writer.newLine();
+        WriteUTF8("\r\n");
     }
 
+    private void response_static(String filepath) throws Exception {
+        File file = new File(filepath.substring(1));
+        HashMap<String, String> header = new HashMap<>();
+        if(!file.exists()){
+            start_response("404 Not Found", header);
+            return;
+        }
+        String suffix = Util.GetFileSuffix(filepath);
+        String default_type = (suffix == null? Server.binary_content_type: Server.text_content_type);
+        header.put("Content-Type", Server.general_files.getOrDefault(suffix, default_type));
+        start_response("200 OK", header);
+        
+        DataInputStream br = new DataInputStream(new FileInputStream(file));
+        byte buffer[] = new byte[256];
+        int n = -1;
+        while((n = br.read(buffer)) > 0){
+            writer.write(buffer, 0, n);
+        }
+        br.close();
+        
+    }
+
+
+    private void WriteUTF8(String str) throws Exception {
+        byte[] bytes = str.getBytes("UTF-8");
+        writer.write(bytes, 0, bytes.length);
+    }
 
     @Override
     public void run(){
@@ -120,13 +165,17 @@ class Handler extends Thread implements CallBack{
             if(environ.isEmpty()){
                 return;
             }
-            System.out.println("connect from [" + socket.getRemoteSocketAddress() + "] ----- " + environ.get("PATH_INFO"));
-        
-            ArrayList<String> body = application.call_app(environ, this);
 
-            for (String data : body) {
-                if(data != null){
-                    writer.write(data);
+            System.out.println(new SimpleDateFormat("[yyyy-MM-dd HH:mm:ss]:").format(new Date()) + " connect from [" + socket.getRemoteSocketAddress() + "] ----- " + environ.get("PATH_INFO"));
+            
+            if(Util.CheckStaticResourse(environ.getOrDefault("PATH_INFO", null))){
+                response_static(environ.getOrDefault("PATH_INFO", null));   
+            }else{
+                ArrayList<String> body = application.call_app(environ, this);
+                for (String data : body) {
+                    if (data != null) {
+                        WriteUTF8(data);
+                    }
                 }
             }
             
@@ -141,4 +190,9 @@ class Handler extends Thread implements CallBack{
 
         }
     }
+
+
+    
+
+
 }

@@ -16,6 +16,8 @@ import java.util.regex.Pattern;
  */
 public class Util {
 
+
+
     protected static String GetSessionValueFromCookie(String cookie){
         if(cookie == null || cookie.length() == 0){
             return null;
@@ -77,15 +79,36 @@ public class Util {
     }
 
 
+    protected static String GetFileSuffix(String filepath){
+        if(filepath == null || filepath.length() == 0){
+            return null;
+        }
+        int index = filepath.lastIndexOf(".");
+        if(index == -1){
+            return null;
+        }
+        return filepath.substring(index+1);
+    }
+
+    // check this url if wants to get a static file, like png, jpg, css
+    protected static boolean CheckStaticResourse(String url){
+        if(url == null || url.length() == 0){
+            return false;
+        }
+        if(url.startsWith("/" + Archer.static_path) || url.equals("/favicon.ico")){
+            return true;
+        }
+        return false;
+    }
+
     protected static String ReadResource(String filepath) throws IOException {
         StringBuilder sb = new StringBuilder();
         File file = new File(filepath);
         BufferedReader br = new BufferedReader(new FileReader(file));
-        assert (br != null);
-        String line = "";
-        while ((line = br.readLine()) != null) {
-            sb.append(line);
-            sb.append("\r\n");
+        char buffer[] = new char[256];
+        int n = -1;
+        while ((n = br.read(buffer)) > 0) {
+            sb.append(buffer, 0, n);
         }
         br.close();
         return sb.toString();

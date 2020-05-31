@@ -1,4 +1,4 @@
-package Archer;
+package archer;
 
 import java.util.HashMap;
 

@@ -1,4 +1,4 @@
-package Archer;
+package archer;
 
 import java.io.*;
 import java.net.ServerSocket;

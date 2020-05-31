@@ -1,4 +1,4 @@
-import Archer.*;
+import archer.*;
 
 /**
  * App: for testing archer

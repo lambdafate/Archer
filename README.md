@@ -20,7 +20,7 @@ public class App {
 ```
 then you can click [http://127.0.0.1:8888/hello/Archer](http://127.0.0.1:8888/hello/Archer).  
 
-### a another simple example
+### another simple example
 ```java
 public class App {
 
